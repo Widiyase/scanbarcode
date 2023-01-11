@@ -2,6 +2,7 @@ package com.example.widiyaqrcodescanner;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -37,10 +38,10 @@ public class MainActivity<view> extends AppCompatActivity implements View.OnClic
         textViewClass = (TextView) findViewById(R.id.textViewClass);
         textViewNim = (TextView) findViewById(R.id.textViewNim);
 
-        //intialisasi scan object
+        //scan object
         qrScan = new IntentIntegrator(this);
 
-        //mengimplentasikan OnClickListener
+        //implementation OnClickListener
         buttonScan.setOnClickListener((View.OnClickListener) this);
     }
 
@@ -53,11 +54,27 @@ public class MainActivity<view> extends AppCompatActivity implements View.OnClic
                 resultCode, data);
         if (result != null) {
             //jika qrcode tidak ada sama sekali
+            Intent intent;
             if (result.getContents() == null) {
                 Toast.makeText(this, "Hasil SCAN tidak ada", Toast.LENGTH_LONG).show();
             }
 
 
+            //phone call
+            String number;
+            number = new String(result.getContents());
+
+            if(number.matches("^[0-9]*$") && number.length() > 10){
+                Intent callIntent = new Intent(Intent.ACTION_CALL);
+                Intent dialIntent = new Intent(Intent.ACTION_DIAL);
+                dialIntent.setData(Uri.parse("tel:" + number));
+                callIntent.setData(Uri.parse("tel:" + number));
+                startActivity(callIntent);
+                startActivity(dialIntent);
+
+            }
+
+            //web
             else if (Patterns.WEB_URL.matcher(result.getContents()).matches()) {
                 Intent visitUrl = new Intent(Intent.ACTION_VIEW, Uri.parse(result.getContents()));
                 startActivity(visitUrl);
@@ -65,27 +82,53 @@ public class MainActivity<view> extends AppCompatActivity implements View.OnClic
             }
 
 
-            else if (Patterns.PHONE.matcher(result.getContents()).matches()) {
-                Intent intent = new Intent(Intent.ACTION_CALL);
-                intent.setData(Uri.parse("tel:" + result.getContents()));
-                startActivity(intent);
+            //maps
+
+            String uriMaps = new String(result.getContents());
+            String maps = "http://maps.google.com/maps?q=bekasi:" + uriMaps;
+            String testDoubleData1 = ",";
+            String testDoubleData2 = ".";
+
+            boolean b = uriMaps.contains(testDoubleData1) && uriMaps.contains(testDoubleData2);
+            if (b) {
+                Intent mapsIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(maps));
+                mapsIntent.setPackage("com.google.android.apps.maps");
+                startActivity(mapsIntent);
+
             }
 
-            else {
-                //jika qr ada/ditemukan data nya
-                try
-                {
-                    //konversi datanya ke json
+            //email
+            String email = new String(result.getContents());
+            String at = "@";
+
+            if (email.contains(at))
+
+            {
+                Intent mail = new Intent(Intent.ACTION_SEND);
+                String[] recipients = {email.replace("http://","")};
+                mail.putExtra(Intent.EXTRA_EMAIL, recipients);
+                mail.putExtra(Intent.EXTRA_SUBJECT, "Subject Email");
+                mail.putExtra(Intent.EXTRA_TEXT, "Type Here");
+                mail.putExtra(Intent.EXTRA_CC, "");
+                mail.setType("text/html");
+                mail.setPackage("com.google.android.gm");
+                startActivity(Intent.createChooser(mail, "Send mail"));
+            }
+
+
+            else{
+
+                try {
+                    //json
                     JSONObject obj = new JSONObject(result.getContents());
-                    //di set nilai datanya ke textviews
+
                     textViewName.setText(obj.getString("nama"));
                     textViewClass.setText(obj.getString("kelas"));
                     textViewNim.setText(obj.getString("nim"));
 
                 }
 
-                catch (JSONException e)
-                {
+                catch (JSONException e) {
                     e.printStackTrace();
                     //jika kontolling ada di sini
                     //itu berarti format encoded tidak cocok
@@ -94,8 +137,8 @@ public class MainActivity<view> extends AppCompatActivity implements View.OnClic
                     Toast.makeText(this, result.getContents(),
                             Toast.LENGTH_LONG).show();
                 }
-                    }
-                            } else
+            }
+        } else
                             {
                     super.onActivityResult(requestCode, resultCode, data);
                             }
@@ -104,7 +147,7 @@ public class MainActivity<view> extends AppCompatActivity implements View.OnClic
 
     @Override
     public void onClick(View view) {
-        //inisialisasi scanning qr code
+        //initialising scanning qr code
         qrScan.initiateScan();
     }
 
